@@ -638,11 +638,13 @@ function saveDay(week, day, totalSecs, runSecs) {
 
 // ============ CLOUD SYNC ============
 function getUserId() {
+  // Use cookie (shared between Safari and PWA) instead of localStorage
+  const match = document.cookie.match(/(?:^|; )c25k_userId=([^;]+)/);
+  if (match) return match[1];
+  // Migrate from localStorage if exists
   let id = localStorage.getItem('c25k_userId');
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem('c25k_userId', id);
-  }
+  if (!id) id = crypto.randomUUID();
+  document.cookie = `c25k_userId=${id}; path=/; max-age=${60*60*24*365}; SameSite=Lax`;
   return id;
 }
 
@@ -1086,27 +1088,18 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 
-// ============ SEED W1D1 ============
-(function seedW1D1() {
-  const seeded = localStorage.getItem('c25k_seed_w1d1');
-  if (seeded) return;
-  const p = getProgress();
-  if (p[1] && p[1].includes(1)) {
-    localStorage.setItem('c25k_seed_w1d1', '1');
-    return;
-  }
-  // Seed Week 1 Day 1 — completed on 2026-02-17
-  saveDay(1, 1, 1800, 480);
-  // Fix the auto-generated date to the actual completion date
-  const h = getHistory();
-  if (h.length > 0 && h[0].week === 1 && h[0].day === 1) {
-    h[0].date = '2026-02-17T12:00:00.000Z';
-    localStorage.setItem('c25k_history', JSON.stringify(h));
-  }
-  localStorage.setItem('c25k_seed_w1d1', '1');
-})();
-
 // ============ INIT ============
+(function handleLink() {
+  const params = new URLSearchParams(window.location.search);
+  const linkId = params.get('link');
+  if (linkId) {
+    localStorage.removeItem('c25k_progress');
+    localStorage.removeItem('c25k_history');
+    localStorage.removeItem('c25k_seed_w1d1');
+    document.cookie = `c25k_userId=${linkId}; path=/; max-age=${60*60*24*365}; SameSite=Lax`;
+    window.history.replaceState({}, '', '/');
+  }
+})();
 renderHome();
 pullFromCloud();
 </script>
