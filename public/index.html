@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="C25K">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>Couch to 5K</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #14141f;
+  --surface2: #1e1e2e;
+  --run: #ff4d6a;
+  --run-glow: rgba(255, 77, 106, 0.3);
+  --walk: #4ddfff;
+  --walk-glow: rgba(77, 223, 255, 0.3);
+  --warmup: #ffa64d;
+  --warmup-glow: rgba(255, 166, 77, 0.3);
+  --done: #4dff91;
+  --done-glow: rgba(77, 255, 145, 0.3);
+  --text: #f0f0f5;
+  --text-dim: #7a7a8e;
+  --text-mid: #a0a0b5;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body { position: fixed; width: 100%; }
+
+.screen { display: none; height: 100vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* HOME */
+#home { padding: 60px 24px 100px; align-items: center; }
+
+.logo-mark {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; letter-spacing: 4px;
+  color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;
+}
+
+.logo {
+  font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 42px;
+  letter-spacing: -1px; margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--run), #ff8fa8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.tagline { font-size: 14px; color: var(--text-dim); margin-bottom: 40px; font-weight: 300; }
+
+.stats-bar { width: 100%; max-width: 400px; display: flex; gap: 8px; margin-bottom: 24px; }
+
+.stat-card {
+  flex: 1; background: var(--surface); border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 14px; padding: 14px 12px; text-align: center;
+}
+
+.stat-card .stat-val {
+  font-family: 'Space Mono', monospace; font-weight: 700; font-size: 22px;
+  color: var(--run); line-height: 1;
+}
+
+.stat-card .stat-label {
+  font-size: 10px; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 1px; margin-top: 4px;
+}
+
+.stat-card.streak .stat-val { color: var(--warmup); }
+.stat-card.total-runs .stat-val { color: var(--done); }
+
+.week-grid { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 8px; }
+
+.week-card {
+  background: var(--surface); border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 14px; padding: 16px 18px; display: flex; align-items: center;
+  justify-content: space-between; cursor: pointer; transition: all 0.2s;
+  -webkit-user-select: none; user-select: none;
+}
+
+.week-card:active { transform: scale(0.98); background: var(--surface2); }
+.week-card-left { display: flex; align-items: center; gap: 14px; }
+
+.week-num {
+  font-family: 'Space Mono', monospace; font-weight: 700; font-size: 20px;
+  color: var(--run); min-width: 32px;
+}
+
+.week-info h3 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+.week-info p { font-size: 12px; color: var(--text-dim); font-weight: 300; }
+.week-arrow { color: var(--text-dim); font-size: 18px; }
+.week-card.completed .week-num { color: var(--done); }
+.week-card.completed { border-color: rgba(77, 255, 145, 0.1); }
+
+.history-section { width: 100%; max-width: 400px; margin-top: 24px; }
+
+.history-title {
+  font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px;
+  color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px;
+}
+
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+
+.history-item {
+  background: var(--surface); border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px; padding: 12px 16px; display: flex;
+  justify-content: space-between; align-items: center;
+}
+
+.history-item-left { display: flex; flex-direction: column; }
+.history-item-label { font-size: 14px; font-weight: 600; }
+.history-item-date { font-size: 11px; color: var(--text-dim); font-weight: 300; }
+
+.history-item-time {
+  font-family: 'Space Mono', monospace; font-size: 13px; color: var(--text-mid);
+}
+
+.no-history {
+  font-size: 13px; color: var(--text-dim); font-weight: 300;
+  font-style: italic; text-align: center; padding: 16px 0;
+}
+
+/* WORKOUT */
+#workout {
+  padding: 0; align-items: center; justify-content: space-between;
+  height: 100vh; overflow: hidden;
+}
+
+.workout-header {
+  width: 100%; padding: 50px 24px 16px; display: flex; align-items: center; gap: 12px;
+}
+
+.back-btn {
+  background: var(--surface); border: none; color: var(--text);
+  width: 40px; height: 40px; border-radius: 12px; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.workout-title { font-size: 16px; font-weight: 600; }
+.workout-subtitle { font-size: 12px; color: var(--text-dim); font-weight: 300; }
+
+.timer-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; width: 100%; padding: 0 24px;
+}
+
+.phase-label {
+  font-family: 'Space Mono', monospace; font-size: 13px; letter-spacing: 4px;
+  text-transform: uppercase; margin-bottom: 12px; transition: color 0.3s;
+}
+
+.timer-ring-container { position: relative; width: 240px; height: 240px; margin-bottom: 16px; }
+.timer-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer-ring-bg { fill: none; stroke: var(--surface2); stroke-width: 6; }
+
+.timer-ring-progress {
+  fill: none; stroke: var(--run); stroke-width: 6; stroke-linecap: round;
+  transition: stroke 0.3s; stroke-dasharray: 703; stroke-dashoffset: 0;
+}
+
+.timer-glow {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 180px; height: 180px; border-radius: 50%; filter: blur(40px);
+  opacity: 0.15; transition: background 0.3s; pointer-events: none;
+}
+
+.timer-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;
+}
+
+.timer-time {
+  font-family: 'Space Mono', monospace; font-size: 52px; font-weight: 700;
+  letter-spacing: -2px; line-height: 1;
+}
+
+.timer-phase-small { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+.interval-dots {
+  display: flex; gap: 8px; margin-bottom: 8px; justify-content: center;
+  flex-wrap: wrap; max-width: 300px;
+}
+
+.interval-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--surface2); transition: all 0.3s;
+}
+
+.interval-dot.active { background: var(--run); box-shadow: 0 0 8px var(--run-glow); }
+.interval-dot.done { background: var(--done); }
+
+.total-time {
+  font-size: 12px; color: var(--text-dim); font-family: 'Space Mono', monospace;
+}
+
+.controls {
+  width: 100%; padding: 20px 24px 50px; display: flex; justify-content: center; gap: 16px;
+}
+
+.btn-main {
+  width: 72px; height: 72px; border-radius: 50%; border: none;
+  background: var(--run); color: white; font-size: 28px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 30px var(--run-glow); transition: all 0.2s;
+}
+
+.btn-main:active { transform: scale(0.92); }
+
+.btn-secondary {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08); background: var(--surface);
+  color: var(--text-mid); font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  align-self: center; transition: all 0.2s;
+}
+
+.btn-secondary:active { transform: scale(0.92); }
+
+/* COMPLETE */
+#complete {
+  padding: 60px 24px; align-items: center; justify-content: center; text-align: center;
+}
+
+.complete-icon { font-size: 64px; margin-bottom: 16px; }
+
+.complete-title {
+  font-weight: 800; font-size: 32px; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--done), #4ddfff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.complete-subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 8px; font-weight: 300; }
+
+.complete-stats { display: flex; gap: 24px; margin: 24px 0 40px; }
+.stat { text-align: center; }
+
+.stat-val {
+  font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700;
+}
+
+.stat-label {
+  font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;
+}
+
+.btn-done {
+  background: var(--surface); border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text); font-family: 'Outfit', sans-serif; font-size: 16px;
+  font-weight: 600; padding: 16px 48px; border-radius: 50px; cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-done:active { transform: scale(0.96); }
+
+/* Phase colors */
+.phase-warmup .phase-label { color: var(--warmup); }
+.phase-warmup .timer-ring-progress { stroke: var(--warmup); }
+.phase-warmup .timer-glow { background: var(--warmup); }
+.phase-warmup .timer-time { color: var(--warmup); }
+
+.phase-run .phase-label { color: var(--run); }
+.phase-run .timer-ring-progress { stroke: var(--run); }
+.phase-run .timer-glow { background: var(--run); }
+.phase-run .timer-time { color: var(--run); }
+
+.phase-walk .phase-label { color: var(--walk); }
+.phase-walk .timer-ring-progress { stroke: var(--walk); }
+.phase-walk .timer-glow { background: var(--walk); }
+.phase-walk .timer-time { color: var(--walk); }
+
+.phase-cooldown .phase-label { color: var(--warmup); }
+.phase-cooldown .timer-ring-progress { stroke: var(--warmup); }
+.phase-cooldown .timer-glow { background: var(--warmup); }
+.phase-cooldown .timer-time { color: var(--warmup); }
+
+.phase-done .phase-label { color: var(--done); }
+.phase-done .timer-ring-progress { stroke: var(--done); }
+.phase-done .timer-glow { background: var(--done); }
+.phase-done .timer-time { color: var(--done); }
+
+@keyframes flash { 0% { opacity: 0; } 50% { opacity: 0.3; } 100% { opacity: 0; } }
+
+.flash-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; opacity: 0; z-index: 100;
+}
+
+.flash-overlay.flash { animation: flash 0.4s ease-out; }
+
+/* Audio status indicator */
+.audio-status {
+  position: fixed; top: 12px; right: 12px; font-size: 10px;
+  color: var(--text-dim); font-family: 'Space Mono', monospace;
+  opacity: 0.5; z-index: 50;
+}
+</style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+<div class="audio-status" id="audioStatus"></div>
+
+<!-- Hidden audio element for background keep-alive -->
+<audio id="silentAudio" loop playsinline>
+  <source src="/silence.mp3" type="audio/mpeg">
+</audio>
+
+<!-- HOME -->
+<div class="screen active" id="home">
+  <div class="logo-mark">8 WEEKS</div>
+  <div class="logo">Couch to 5K</div>
+  <div class="tagline">get off the couch already</div>
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card total-runs">
+      <div class="stat-val" id="homeStatRuns">0</div>
+      <div class="stat-label">Runs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="homeStatTime">0:00</div>
+      <div class="stat-label">Total Time</div>
+    </div>
+    <div class="stat-card streak">
+      <div class="stat-val" id="homeStatStreak">0</div>
+      <div class="stat-label">Streak</div>
+    </div>
+  </div>
+  <div class="week-grid" id="weekGrid"></div>
+  <div class="history-section" id="historySection">
+    <div class="history-title">Recent Runs</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+</div>
+
+<!-- WORKOUT -->
+<div class="screen" id="workout">
+  <div class="workout-header">
+    <button class="back-btn" id="backBtn">←</button>
+    <div>
+      <div class="workout-title" id="workoutTitle">Week 1 — Day 1</div>
+      <div class="workout-subtitle" id="workoutSubtitle">Run 60s / Walk 90s × 8</div>
+    </div>
+  </div>
+
+  <div class="timer-area" id="timerArea">
+    <div class="phase-label" id="phaseLabel">READY</div>
+    <div class="timer-ring-container">
+      <svg class="timer-ring" viewBox="0 0 240 240">
+        <circle class="timer-ring-bg" cx="120" cy="120" r="112" />
+        <circle class="timer-ring-progress" id="ringProgress" cx="120" cy="120" r="112" />
+      </svg>
+      <div class="timer-glow" id="timerGlow"></div>
+      <div class="timer-center">
+        <div class="timer-time" id="timerTime">0:00</div>
+        <div class="timer-phase-small" id="timerPhaseSmall">tap play to start</div>
+      </div>
+    </div>
+    <div class="interval-dots" id="intervalDots"></div>
+    <div class="total-time" id="totalTime">total: 0:00</div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-secondary" id="resetBtn">↺</button>
+    <button class="btn-main" id="playBtn">▶</button>
+    <button class="btn-secondary" id="skipBtn">⏭</button>
+  </div>
+</div>
+
+<!-- COMPLETE -->
+<div class="screen" id="complete">
+  <div class="complete-icon">🏃‍♀️</div>
+  <div class="complete-title">Done!</div>
+  <div class="complete-subtitle" id="completeSubtitle">Week 1 — Day 1 complete</div>
+  <div class="complete-stats">
+    <div class="stat">
+      <div class="stat-val" id="statTime">--:--</div>
+      <div class="stat-label">Total Time</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statRun">--:--</div>
+      <div class="stat-label">Running</div>
+    </div>
+  </div>
+  <button class="btn-done" id="doneBtn">Back to Plan</button>
+</div>
+
+<script>
+// ============ PROGRAM DATA ============
+const program = [
+  {
+    week: 1, title: "Just get moving",
+    summary: "Run 60s / Walk 90s × 8",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      ...Array(8).fill(null).flatMap(() => [
+        { type: 'run', duration: 60 },
+        { type: 'walk', duration: 90 }
+      ]),
+      { type: 'cooldown', duration: 300 }
+    ]
+  },
+  {
+    week: 2, title: "Building momentum",
+    summary: "Run 90s / Walk 2min × 6",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      ...Array(6).fill(null).flatMap(() => [
+        { type: 'run', duration: 90 },
+        { type: 'walk', duration: 120 }
+      ]),
+      { type: 'cooldown', duration: 300 }
+    ]
+  },
+  {
+    week: 3, title: "Leveling up",
+    summary: "Run 90s / Walk 90s / Run 3min / Walk 3min × 2",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      ...Array(2).fill(null).flatMap(() => [
+        { type: 'run', duration: 90 },
+        { type: 'walk', duration: 90 },
+        { type: 'run', duration: 180 },
+        { type: 'walk', duration: 180 }
+      ]),
+      { type: 'cooldown', duration: 300 }
+    ]
+  },
+  {
+    week: 4, title: "Finding your rhythm",
+    summary: "Run 3min / Walk 90s / Run 5min / Walk 2.5min",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      { type: 'run', duration: 180 }, { type: 'walk', duration: 90 },
+      { type: 'run', duration: 300 }, { type: 'walk', duration: 150 },
+      { type: 'run', duration: 180 }, { type: 'walk', duration: 90 },
+      { type: 'run', duration: 300 },
+      { type: 'cooldown', duration: 300 }
+    ]
+  },
+  {
+    week: 5, title: "The breakthrough week",
+    summary: "Building to 20min continuous",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      { type: 'run', duration: 300 }, { type: 'walk', duration: 180 },
+      { type: 'run', duration: 300 }, { type: 'walk', duration: 180 },
+      { type: 'run', duration: 300 },
+      { type: 'cooldown', duration: 300 }
+    ],
+    days: [
+      null, null,
+      {
+        summary: "Day 2: Run 8min / Walk 5min / Run 8min",
+        intervals: [
+          { type: 'warmup', duration: 300 },
+          { type: 'run', duration: 480 }, { type: 'walk', duration: 300 },
+          { type: 'run', duration: 480 },
+          { type: 'cooldown', duration: 300 }
+        ]
+      },
+      {
+        summary: "Day 3: Run 20 minutes straight!",
+        intervals: [
+          { type: 'warmup', duration: 300 },
+          { type: 'run', duration: 1200 },
+          { type: 'cooldown', duration: 300 }
+        ]
+      }
+    ]
+  },
+  {
+    week: 6, title: "Consolidating gains",
+    summary: "Building to 25min continuous",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      { type: 'run', duration: 300 }, { type: 'walk', duration: 180 },
+      { type: 'run', duration: 480 }, { type: 'walk', duration: 180 },
+      { type: 'run', duration: 300 },
+      { type: 'cooldown', duration: 300 }
+    ],
+    days: [
+      null, null,
+      {
+        summary: "Day 2: Run 10min / Walk 3min / Run 10min",
+        intervals: [
+          { type: 'warmup', duration: 300 },
+          { type: 'run', duration: 600 }, { type: 'walk', duration: 180 },
+          { type: 'run', duration: 600 },
+          { type: 'cooldown', duration: 300 }
+        ]
+      },
+      {
+        summary: "Day 3: Run 25 minutes straight",
+        intervals: [
+          { type: 'warmup', duration: 300 },
+          { type: 'run', duration: 1500 },
+          { type: 'cooldown', duration: 300 }
+        ]
+      }
+    ]
+  },
+  {
+    week: 7, title: "Almost there",
+    summary: "Run 25 minutes × 3",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      { type: 'run', duration: 1500 },
+      { type: 'cooldown', duration: 300 }
+    ]
+  },
+  {
+    week: 8, title: "You did it",
+    summary: "Run 28–30 minutes",
+    intervals: [
+      { type: 'warmup', duration: 300 },
+      { type: 'run', duration: 1680 },
+      { type: 'cooldown', duration: 300 }
+    ],
+    days: [
+      null, null, null,
+      {
+        summary: "Day 3: Run 30 minutes 🎉",
+        intervals: [
+          { type: 'warmup', duration: 300 },
+          { type: 'run', duration: 1800 },
+          { type: 'cooldown', duration: 300 }
+        ]
+      }
+    ]
+  }
+];
+
+// ============ AUDIO ENGINE ============
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const silentAudio = document.getElementById('silentAudio');
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+// Silent audio loop — keeps the browser alive when screen is locked
+function startSilentAudio() {
+  silentAudio.volume = 0.01; // Nearly silent but not zero (zero gets optimized away)
+  silentAudio.play().then(() => {
+    document.getElementById('audioStatus').textContent = '🔊';
+  }).catch(() => {
+    document.getElementById('audioStatus').textContent = '🔇 tap to enable';
+  });
+}
+
+function stopSilentAudio() {
+  silentAudio.pause();
+  silentAudio.currentTime = 0;
+  document.getElementById('audioStatus').textContent = '';
+}
+
+function playBeep(freq, duration, count = 1) {
+  ensureAudio();
+  for (let i = 0; i < count; i++) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    const startTime = audioCtx.currentTime + i * 0.25;
+    gain.gain.setValueAtTime(0.3, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  }
+}
+
+function beepRun() { playBeep(880, 0.15, 2); }
+function beepWalk() { playBeep(520, 0.2, 1); }
+function beepWarmup() { playBeep(660, 0.15, 1); }
+function beepDone() { playBeep(1047, 0.12, 3); }
+function beepCountdown() { playBeep(440, 0.08, 1); }
+
+// ============ SPEECH ============
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    // Cancel any pending speech
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95;
+    u.pitch = 1;
+    u.volume = 1;
+    speechSynthesis.speak(u);
+  }
+}
+
+// ============ STATE ============
+let currentWeek = 0;
+let currentDay = 1;
+let intervals = [];
+let intervalIndex = 0;
+let secondsLeft = 0;
+let totalSeconds = 0;
+let isRunning = false;
+let tickInterval = null;
+
+// ============ PERSISTENCE ============
+function getProgress() {
+  try { return JSON.parse(localStorage.getItem('c25k_progress') || '{}'); }
+  catch { return {}; }
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('c25k_history') || '[]'); }
+  catch { return []; }
+}
+
+function saveDay(week, day, totalSecs, runSecs) {
+  const p = getProgress();
+  if (!p[week]) p[week] = [];
+  if (!p[week].includes(day)) p[week].push(day);
+  localStorage.setItem('c25k_progress', JSON.stringify(p));
+
+  const history = getHistory();
+  history.unshift({ week, day, totalSecs, runSecs, date: new Date().toISOString() });
+  localStorage.setItem('c25k_history', JSON.stringify(history));
+
+  pushToCloud();
+}
+
+// ============ CLOUD SYNC ============
+function getUserId() {
+  let id = localStorage.getItem('c25k_userId');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('c25k_userId', id);
+  }
+  return id;
+}
+
+function mergeData(local, cloud) {
+  // Union merge progress (additive)
+  const progress = { ...cloud.progress };
+  for (const [week, days] of Object.entries(local.progress)) {
+    if (!progress[week]) progress[week] = [];
+    for (const d of days) {
+      if (!progress[week].includes(d)) progress[week].push(d);
+    }
+  }
+
+  // Deduplicate history by date+week+day key, keep newest first
+  const seen = new Set();
+  const allHistory = [...local.history, ...cloud.history];
+  const history = [];
+  for (const h of allHistory) {
+    const key = `${h.week}-${h.day}-${h.date}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      history.push(h);
+    }
+  }
+  history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return { progress, history: history.slice(0, 100) };
+}
+
+async function pullFromCloud() {
+  try {
+    const userId = getUserId();
+    const resp = await fetch(`/api/sync?userId=${encodeURIComponent(userId)}`);
+    if (!resp.ok) return;
+    const cloud = await resp.json();
+
+    const local = { progress: getProgress(), history: getHistory() };
+    const merged = mergeData(local, cloud);
+
+    localStorage.setItem('c25k_progress', JSON.stringify(merged.progress));
+    localStorage.setItem('c25k_history', JSON.stringify(merged.history));
+
+    renderHome();
+
+    // Push back if local had entries the cloud didn't
+    const localKeys = new Set(local.history.map(h => `${h.week}-${h.day}-${h.date}`));
+    const cloudKeys = new Set((cloud.history || []).map(h => `${h.week}-${h.day}-${h.date}`));
+    const hasNewLocal = [...localKeys].some(k => !cloudKeys.has(k));
+    if (hasNewLocal) pushToCloud();
+  } catch {
+    // Offline or API unavailable — no-op, localStorage is primary
+  }
+}
+
+async function pushToCloud() {
+  try {
+    const userId = getUserId();
+    await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        progress: getProgress(),
+        history: getHistory(),
+      }),
+    });
+  } catch {
+    // Fire-and-forget — offline is fine
+  }
+}
+
+function weekCompleted(week) {
+  const p = getProgress();
+  return p[week] && p[week].length >= 3;
+}
+
+function getStreak() {
+  const history = getHistory();
+  if (history.length === 0) return 0;
+  let streak = 0;
+  const now = new Date();
+  const dates = [...new Set(history.map(h => h.date.slice(0, 10)))].sort().reverse();
+  const today = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
+  if (dates[0] !== today && dates[0] !== yesterday) return 0;
+  for (let i = 0; i < dates.length; i++) {
+    if (i === 0) { streak++; continue; }
+    const prev = new Date(dates[i - 1]);
+    const d = new Date(dates[i]);
+    const diff = (prev - d) / 86400000;
+    if (diff <= 3) { streak++; } else { break; }
+  }
+  return streak;
+}
+
+function getTotalTime() {
+  return getHistory().reduce((a, h) => a + (h.totalSecs || 0), 0);
+}
+
+function formatDuration(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h > 0) return `${h}h${m > 0 ? m : ''}`;
+  return `${m}:${(secs % 60).toString().padStart(2, '0')}`;
+}
+
+function renderStats() {
+  const history = getHistory();
+  document.getElementById('homeStatRuns').textContent = history.length;
+  document.getElementById('homeStatTime').textContent = formatDuration(getTotalTime());
+  document.getElementById('homeStatStreak').textContent = getStreak();
+}
+
+function renderHistory() {
+  const history = getHistory();
+  const list = document.getElementById('historyList');
+  if (history.length === 0) {
+    list.innerHTML = '<div class="no-history">No runs yet — go get your first one!</div>';
+    return;
+  }
+  list.innerHTML = history.slice(0, 10).map(h => {
+    const d = new Date(h.date);
+    const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const timeStr = formatDuration(h.totalSecs || 0);
+    return `
+      <div class="history-item">
+        <div class="history-item-left">
+          <div class="history-item-label">Week ${h.week} — Day ${h.day}</div>
+          <div class="history-item-date">${dateStr}</div>
+        </div>
+        <div class="history-item-time">${timeStr}</div>
+      </div>`;
+  }).join('');
+}
+
+// ============ RENDER HOME ============
+function renderHome() {
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+  program.forEach((w, i) => {
+    const card = document.createElement('div');
+    card.className = 'week-card' + (weekCompleted(i + 1) ? ' completed' : '');
+    card.innerHTML = `
+      <div class="week-card-left">
+        <div class="week-num">${weekCompleted(i + 1) ? '✓' : i + 1}</div>
+        <div class="week-info">
+          <h3>${w.title}</h3>
+          <p>${w.summary}</p>
+        </div>
+      </div>
+      <div class="week-arrow">›</div>`;
+    card.addEventListener('click', () => startWeek(i));
+    grid.appendChild(card);
+  });
+  renderStats();
+  renderHistory();
+}
+
+// ============ DAY SELECTION ============
+function getIntervalsForDay(weekIdx, day) {
+  const w = program[weekIdx];
+  if (w.days && w.days[day] && w.days[day].intervals) {
+    return { intervals: w.days[day].intervals, summary: w.days[day].summary };
+  }
+  return { intervals: w.intervals, summary: `Day ${day}: ${w.summary}` };
+}
+
+function getNextDay(weekIdx) {
+  const p = getProgress();
+  const done = (p[weekIdx + 1] || []);
+  for (let d = 1; d <= 3; d++) {
+    if (!done.includes(d)) return d;
+  }
+  return 1;
+}
+
+// ============ START WORKOUT ============
+function startWeek(weekIdx) {
+  currentWeek = weekIdx;
+  currentDay = getNextDay(weekIdx);
+  const { intervals: ints, summary } = getIntervalsForDay(weekIdx, currentDay);
+  intervals = ints;
+  intervalIndex = 0;
+  secondsLeft = intervals[0].duration;
+  totalSeconds = 0;
+  isRunning = false;
+
+  document.getElementById('workoutTitle').textContent = `Week ${weekIdx + 1} — Day ${currentDay}`;
+  document.getElementById('workoutSubtitle').textContent = summary;
+
+  renderIntervalDots();
+  updateTimerDisplay();
+  showScreen('workout');
+  document.getElementById('timerArea').className = 'timer-area';
+  document.getElementById('phaseLabel').textContent = 'READY';
+  document.getElementById('timerPhaseSmall').textContent = 'tap play to start';
+  updatePlayBtn();
+}
+
+// ============ INTERVAL DOTS ============
+function renderIntervalDots() {
+  const dots = document.getElementById('intervalDots');
+  dots.innerHTML = '';
+  const runIndices = [];
+  intervals.forEach((iv, i) => { if (iv.type === 'run') runIndices.push(i); });
+  runIndices.forEach((ri, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'interval-dot';
+    dot.dataset.runIndex = i;
+    dot.dataset.intervalIndex = ri;
+    dots.appendChild(dot);
+  });
+}
+
+function updateDots() {
+  document.querySelectorAll('.interval-dot').forEach(dot => {
+    const ri = parseInt(dot.dataset.intervalIndex);
+    if (ri < intervalIndex) dot.className = 'interval-dot done';
+    else if (ri === intervalIndex) dot.className = 'interval-dot active';
+    else dot.className = 'interval-dot';
+  });
+}
+
+// ============ TIMER DISPLAY ============
+const CIRCUMFERENCE = 2 * Math.PI * 112;
+
+function updateTimerDisplay() {
+  const min = Math.floor(secondsLeft / 60);
+  const sec = secondsLeft % 60;
+  document.getElementById('timerTime').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+
+  const total = intervals[intervalIndex] ? intervals[intervalIndex].duration : 1;
+  const elapsed = total - secondsLeft;
+  const progress = elapsed / total;
+  const offset = CIRCUMFERENCE * (1 - progress);
+  document.getElementById('ringProgress').style.strokeDasharray = CIRCUMFERENCE;
+  document.getElementById('ringProgress').style.strokeDashoffset = offset;
+
+  const tMin = Math.floor(totalSeconds / 60);
+  const tSec = totalSeconds % 60;
+  document.getElementById('totalTime').textContent = `total: ${tMin}:${tSec.toString().padStart(2, '0')}`;
+
+  const phase = intervals[intervalIndex] ? intervals[intervalIndex].type : 'done';
+  document.getElementById('timerArea').className = `timer-area phase-${phase}`;
+
+  const labels = { warmup: 'WARM UP', run: 'RUN', walk: 'WALK', cooldown: 'COOL DOWN', done: 'DONE' };
+  if (isRunning || totalSeconds > 0) {
+    document.getElementById('phaseLabel').textContent = labels[phase] || 'DONE';
+    document.getElementById('timerPhaseSmall').textContent =
+      (phase === 'run' || phase === 'walk') ? `${intervals[intervalIndex].duration}s interval` : '';
+  }
+  updateDots();
+}
+
+// ============ BACKGROUND-AWARE TIMER ============
+let wakeLock = null;
+let lastTickTime = null;
+// Store the absolute target time for each phase transition so background catch-up is accurate
+let workoutStartWallTime = null;
+let workoutStartTotalSeconds = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch {}
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release(); wakeLock = null; }
+}
+
+function startTimer() {
+  isRunning = true;
+  lastTickTime = Date.now();
+  if (workoutStartWallTime === null) {
+    workoutStartWallTime = Date.now();
+    workoutStartTotalSeconds = totalSeconds;
+  }
+  tickInterval = setInterval(backgroundAwareTick, 250);
+  requestWakeLock();
+  startSilentAudio(); // Keep browser alive when screen locks
+  updatePlayBtn();
+}
+
+function stopTimer() {
+  isRunning = false;
+  clearInterval(tickInterval);
+  lastTickTime = null;
+  releaseWakeLock();
+  stopSilentAudio();
+  updatePlayBtn();
+}
+
+function backgroundAwareTick() {
+  if (!isRunning) return;
+  const now = Date.now();
+  const elapsed = Math.floor((now - lastTickTime) / 1000);
+  if (elapsed < 1) return;
+  lastTickTime = now;
+
+  // Process each elapsed second
+  for (let i = 0; i < elapsed; i++) {
+    secondsLeft--;
+    totalSeconds++;
+
+    // Only beep countdown if we're in real-time (not catching up from background)
+    if (elapsed <= 2 && secondsLeft <= 3 && secondsLeft > 0) {
+      beepCountdown();
+    }
+
+    if (secondsLeft <= 0) {
+      intervalIndex++;
+      if (intervalIndex >= intervals.length) {
+        finishWorkout();
+        return;
+      }
+      secondsLeft = intervals[intervalIndex].duration;
+      const phase = intervals[intervalIndex].type;
+
+      // Always announce phase changes (even after background catch-up)
+      if (i === elapsed - 1 || elapsed <= 2) {
+        flashScreen(phase);
+        if (phase === 'run') { beepRun(); speak('Run'); }
+        else if (phase === 'walk') { beepWalk(); speak('Walk'); }
+        else if (phase === 'cooldown') { beepWarmup(); speak('Cool down'); }
+      }
+    }
+  }
+  updateTimerDisplay();
+}
+
+// Re-acquire wake lock and restart silent audio when page becomes visible
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isRunning) {
+    requestWakeLock();
+    startSilentAudio();
+  }
+});
+
+function flashScreen(phase) {
+  const overlay = document.getElementById('flashOverlay');
+  const colors = { run: 'var(--run)', walk: 'var(--walk)', warmup: 'var(--warmup)', cooldown: 'var(--warmup)' };
+  overlay.style.background = colors[phase] || 'white';
+  overlay.classList.remove('flash');
+  void overlay.offsetWidth;
+  overlay.classList.add('flash');
+}
+
+// ============ CONTROLS ============
+function togglePlay() {
+  ensureAudio();
+  if (isRunning) {
+    stopTimer();
+  } else {
+    if (totalSeconds === 0) {
+      speak('Warm up. Walk for 5 minutes.');
+      beepWarmup();
+    }
+    startTimer();
+  }
+}
+
+function updatePlayBtn() {
+  document.getElementById('playBtn').textContent = isRunning ? '⏸' : '▶';
+}
+
+function skipInterval() {
+  if (!isRunning && totalSeconds === 0) return;
+  totalSeconds += secondsLeft;
+  intervalIndex++;
+  if (intervalIndex >= intervals.length) { finishWorkout(); return; }
+  secondsLeft = intervals[intervalIndex].duration;
+  const phase = intervals[intervalIndex].type;
+  flashScreen(phase);
+  if (phase === 'run') { beepRun(); speak('Run'); }
+  else if (phase === 'walk') { beepWalk(); speak('Walk'); }
+  else if (phase === 'cooldown') { beepWarmup(); speak('Cool down'); }
+  updateTimerDisplay();
+}
+
+function resetWorkout() {
+  stopTimer();
+  intervalIndex = 0;
+  secondsLeft = intervals[0].duration;
+  totalSeconds = 0;
+  workoutStartWallTime = null;
+  workoutStartTotalSeconds = null;
+  updateTimerDisplay();
+  document.getElementById('phaseLabel').textContent = 'READY';
+  document.getElementById('timerPhaseSmall').textContent = 'tap play to start';
+  document.getElementById('timerArea').className = 'timer-area';
+}
+
+function finishWorkout() {
+  stopTimer();
+  beepDone();
+  speak('Workout complete. Great job!');
+  workoutStartWallTime = null;
+  workoutStartTotalSeconds = null;
+
+  const runSecs = intervals.filter(iv => iv.type === 'run').reduce((a, iv) => a + iv.duration, 0);
+  saveDay(currentWeek + 1, currentDay, totalSeconds, runSecs);
+
+  const tMin = Math.floor(totalSeconds / 60);
+  const tSec = totalSeconds % 60;
+  document.getElementById('statTime').textContent = `${tMin}:${tSec.toString().padStart(2, '0')}`;
+
+  const rMin = Math.floor(runSecs / 60);
+  const rSec = runSecs % 60;
+  document.getElementById('statRun').textContent = `${rMin}:${rSec.toString().padStart(2, '0')}`;
+
+  document.getElementById('completeSubtitle').textContent = `Week ${currentWeek + 1} — Day ${currentDay} complete`;
+  showScreen('complete');
+}
+
+// ============ NAV ============
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'home') renderHome();
+}
+
+// ============ EVENT LISTENERS ============
+document.getElementById('playBtn').addEventListener('click', togglePlay);
+document.getElementById('skipBtn').addEventListener('click', skipInterval);
+document.getElementById('resetBtn').addEventListener('click', resetWorkout);
+document.getElementById('backBtn').addEventListener('click', () => { stopTimer(); showScreen('home'); });
+document.getElementById('doneBtn').addEventListener('click', () => showScreen('home'));
+
+// Tap anywhere to enable audio if it failed on load
+document.getElementById('audioStatus').addEventListener('click', () => {
+  ensureAudio();
+  startSilentAudio();
+});
+
+// ============ SERVICE WORKER ============
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ============ SEED W1D1 ============
+(function seedW1D1() {
+  const seeded = localStorage.getItem('c25k_seed_w1d1');
+  if (seeded) return;
+  const p = getProgress();
+  if (p[1] && p[1].includes(1)) {
+    localStorage.setItem('c25k_seed_w1d1', '1');
+    return;
+  }
+  // Seed Week 1 Day 1 — completed on 2026-02-17
+  saveDay(1, 1, 1800, 480);
+  // Fix the auto-generated date to the actual completion date
+  const h = getHistory();
+  if (h.length > 0 && h[0].week === 1 && h[0].day === 1) {
+    h[0].date = '2026-02-17T12:00:00.000Z';
+    localStorage.setItem('c25k_history', JSON.stringify(h));
+  }
+  localStorage.setItem('c25k_seed_w1d1', '1');
+})();
+
+// ============ INIT ============
+renderHome();
+pullFromCloud();
+</script>
+</body>
+</html>
