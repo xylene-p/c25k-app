@@ -1,4 +1,4 @@
-const CACHE_NAME = 'c25k-v4';
+const CACHE_NAME = 'c25k-v5';
 const ASSETS = [
   '/',
   '/index.html',
@@ -34,16 +34,32 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      return cached || fetch(e.request).then((response) => {
-        // Cache font files dynamically
-        if (e.request.url.includes('fonts.gstatic.com') || e.request.url.includes('fonts.googleapis.com')) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-        }
+  // Network-first for HTML (always get latest), cache-first for assets
+  const isHTML = e.request.mode === 'navigate' ||
+    e.request.url.endsWith('/') ||
+    e.request.url.endsWith('.html');
+
+  if (isHTML) {
+    // Try network first, fall back to cache for offline
+    e.respondWith(
+      fetch(e.request).then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
         return response;
-      }).catch(() => cached);
-    })
-  );
+      }).catch(() => caches.match(e.request))
+    );
+  } else {
+    // Cache-first for static assets (audio, fonts, images)
+    e.respondWith(
+      caches.match(e.request).then((cached) => {
+        return cached || fetch(e.request).then((response) => {
+          if (e.request.url.includes('fonts.gstatic.com') || e.request.url.includes('fonts.googleapis.com')) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          }
+          return response;
+        }).catch(() => cached);
+      })
+    );
+  }
 });
