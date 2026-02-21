@@ -989,11 +989,11 @@ function backgroundAwareTick() {
   updateTimerDisplay();
 }
 
-// Re-acquire wake lock and restart silent audio when page becomes visible
+// Re-acquire wake lock when page becomes visible (only restart audio if it stopped)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isRunning) {
     requestWakeLock();
-    startSilentAudio();
+    if (silentAudio.paused) startSilentAudio();
   }
 });
 
