@@ -1016,11 +1016,12 @@ function backgroundAwareTick() {
   updateTimerDisplay();
 }
 
-// Re-acquire wake lock when page becomes visible (only restart audio if it stopped)
+// Re-acquire wake lock when page becomes visible
+// Don't restart silent audio here — it would reclaim the audio session and pause Spotify.
+// The timer survives via wall-clock catch-up regardless.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isRunning) {
     requestWakeLock();
-    if (silentAudio.paused) startSilentAudio();
   }
 });
 
