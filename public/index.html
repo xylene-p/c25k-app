@@ -545,6 +545,12 @@ const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 const silentAudio = document.getElementById('silentAudio');
 
+// Request ambient audio session so we mix with Spotify/Music instead of pausing them.
+// Safari 17+ / iOS 17+ supports this API.
+if ('audioSession' in navigator) {
+  navigator.audioSession.type = 'ambient';
+}
+
 function ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -552,6 +558,10 @@ function ensureAudio() {
 
 // Silent audio loop — keeps the browser alive when screen is locked
 function startSilentAudio() {
+  // Re-assert ambient mode each time in case the session was reclaimed
+  if ('audioSession' in navigator) {
+    navigator.audioSession.type = 'ambient';
+  }
   silentAudio.volume = 0.01; // Nearly silent but not zero (zero gets optimized away)
   silentAudio.play().then(() => {
     document.getElementById('audioStatus').textContent = '🔊';
