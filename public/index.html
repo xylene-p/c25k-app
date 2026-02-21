@@ -308,14 +308,11 @@ body { position: fixed; width: 100%; }
 </head>
 <body>
 
-<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">63518e7</div>
+<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">e97b5b2</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
 
-<!-- Hidden audio element for background keep-alive -->
-<audio id="silentAudio" loop playsinline>
-  <source src="/silence.mp3" type="audio/mpeg">
-</audio>
+<!-- silence.mp3 no longer used; keepalive via AudioContext oscillator -->
 
 <!-- HOME -->
 <div class="screen active" id="home">
@@ -544,10 +541,9 @@ const program = [
 // ============ AUDIO ENGINE ============
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
-const silentAudio = document.getElementById('silentAudio');
+let silentOsc = null; // AudioContext oscillator used for background keepalive
 
 // Request ambient audio session so we mix with Spotify/Music instead of pausing them.
-// Safari 17+ / iOS 17+ supports this API.
 if ('audioSession' in navigator) {
   navigator.audioSession.type = 'ambient';
 }
@@ -557,23 +553,30 @@ function ensureAudio() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// Silent audio loop — keeps the browser alive when screen is locked
+// Keep browser alive using an AudioContext oscillator instead of <audio> element.
+// The <audio> element claims a full iOS media/playback session which pauses Spotify.
+// An AudioContext oscillator respects the ambient audio session and mixes.
 function startSilentAudio() {
-  // Re-assert ambient mode each time in case the session was reclaimed
+  ensureAudio();
+  if (silentOsc) return; // already running
   if ('audioSession' in navigator) {
     navigator.audioSession.type = 'ambient';
   }
-  silentAudio.volume = 0.01; // Nearly silent but not zero (zero gets optimized away)
-  silentAudio.play().then(() => {
-    document.getElementById('audioStatus').textContent = '🔊';
-  }).catch(() => {
-    document.getElementById('audioStatus').textContent = '🔇 tap to enable';
-  });
+  silentOsc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  silentOsc.connect(gain);
+  gain.connect(audioCtx.destination);
+  gain.gain.value = 0.001; // near-silent but not zero
+  silentOsc.start();
+  document.getElementById('audioStatus').textContent = '🔊';
 }
 
 function stopSilentAudio() {
-  silentAudio.pause();
-  silentAudio.currentTime = 0;
+  if (silentOsc) {
+    silentOsc.stop();
+    silentOsc.disconnect();
+    silentOsc = null;
+  }
   document.getElementById('audioStatus').textContent = '';
 }
 
