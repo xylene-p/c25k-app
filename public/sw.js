@@ -1,9 +1,14 @@
-const CACHE_NAME = 'c25k-v3';
+const CACHE_NAME = 'c25k-v4';
 const ASSETS = [
   '/',
   '/index.html',
   '/silence.mp3',
   '/manifest.json',
+  '/cues/run.m4a',
+  '/cues/walk.m4a',
+  '/cues/cooldown.m4a',
+  '/cues/warmup.m4a',
+  '/cues/done.m4a',
   'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700;800&display=swap'
 ];
 

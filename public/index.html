@@ -599,14 +599,41 @@ function beepWarmup() { playBeep(660, 0.15, 1); }
 function beepDone() { playBeep(1047, 0.12, 3); }
 function beepCountdown() { playBeep(440, 0.08, 1); }
 
-// ============ SPEECH ============
+// ============ VOICE CUES (pre-recorded, played via AudioContext) ============
+const voiceCues = {};
+const cueMap = {
+  'Run': '/cues/run.m4a',
+  'Walk': '/cues/walk.m4a',
+  'Cool down': '/cues/cooldown.m4a',
+  'Warm up. Walk for 5 minutes.': '/cues/warmup.m4a',
+  'Workout complete. Great job!': '/cues/done.m4a'
+};
+
+// Pre-load all voice cues into AudioBuffers
+async function loadVoiceCues() {
+  ensureAudio();
+  for (const [key, url] of Object.entries(cueMap)) {
+    try {
+      const resp = await fetch(url);
+      const buf = await resp.arrayBuffer();
+      voiceCues[key] = await audioCtx.decodeAudioData(buf);
+    } catch (e) { /* cue will fall back to speechSynthesis */ }
+  }
+}
+
 function speak(text) {
-  if ('speechSynthesis' in window) {
-    // Cancel any pending speech
+  ensureAudio();
+  const buffer = voiceCues[text];
+  if (buffer) {
+    const src = audioCtx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(audioCtx.destination);
+    src.start();
+  } else if ('speechSynthesis' in window) {
+    // Fallback if cue wasn't loaded
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 0.95;
-    u.pitch = 1;
     u.volume = 1;
     speechSynthesis.speak(u);
   }
@@ -1007,8 +1034,10 @@ function flashScreen(phase) {
 }
 
 // ============ CONTROLS ============
+let cuesLoaded = false;
 function togglePlay() {
   ensureAudio();
+  if (!cuesLoaded) { cuesLoaded = true; loadVoiceCues(); }
   if (isRunning) {
     stopTimer();
   } else {
