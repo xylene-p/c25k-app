@@ -308,7 +308,7 @@ body { position: fixed; width: 100%; }
 </head>
 <body>
 
-<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">5593536</div>
+<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">dd41031</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
 
@@ -546,10 +546,10 @@ const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 const silentAudio = document.getElementById('silentAudio');
 
-// Request ambient audio session so beeps/cues mix with Spotify/Music.
-if ('audioSession' in navigator) {
-  navigator.audioSession.type = 'ambient';
-}
+// Note: do NOT set audioSession.type to 'ambient' — it causes iOS to suspend
+// all audio (including keepalive) on screen lock. The <audio> element needs a
+// full playback session to survive screen lock. This will briefly pause Spotify
+// when a workout starts; the user resumes Spotify and both coexist from then on.
 
 function ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
