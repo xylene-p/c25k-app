@@ -308,14 +308,10 @@ body { position: fixed; width: 100%; }
 </head>
 <body>
 
-<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">dd41031</div>
+<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">f9149ba</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
 
-<!-- Silent audio loop — keeps the browser alive when screen is locked -->
-<audio id="silentAudio" loop playsinline>
-  <source src="/silence.mp3" type="audio/mpeg">
-</audio>
 
 <!-- HOME -->
 <div class="screen active" id="home">
@@ -544,34 +540,40 @@ const program = [
 // ============ AUDIO ENGINE ============
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
-const silentAudio = document.getElementById('silentAudio');
+let silentOsc = null;
 
-// Note: do NOT set audioSession.type to 'ambient' — it causes iOS to suspend
-// all audio (including keepalive) on screen lock. The <audio> element needs a
-// full playback session to survive screen lock. This will briefly pause Spotify
-// when a workout starts; the user resumes Spotify and both coexist from then on.
+// No audioSession.type set — let the browser use its default ('auto').
+// 'ambient' was tested and kills the page on screen lock.
+// The <audio> element was tested and claims a media session that conflicts with Spotify.
+// AudioContext oscillator with default session type is the remaining option.
 
 function ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// Silent <audio> loop keeps the browser alive when screen is locked.
-// This will briefly pause Spotify on first play — user resumes Spotify
-// and both coexist from then on (including through screen lock).
-// IMPORTANT: never restart this on visibility change or it re-claims the session.
+// Keep browser alive using an AudioContext oscillator.
+// Unlike <audio>, this doesn't claim a full iOS media session so it
+// shouldn't interrupt Spotify. Unlike 'ambient', we don't explicitly
+// tell iOS to suspend on lock.
 function startSilentAudio() {
-  silentAudio.volume = 0.01;
-  silentAudio.play().then(() => {
-    document.getElementById('audioStatus').textContent = '🔊';
-  }).catch(() => {
-    document.getElementById('audioStatus').textContent = '🔇 tap to enable';
-  });
+  ensureAudio();
+  if (silentOsc) return;
+  silentOsc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  silentOsc.connect(gain);
+  gain.connect(audioCtx.destination);
+  gain.gain.value = 0.001;
+  silentOsc.start();
+  document.getElementById('audioStatus').textContent = '🔊';
 }
 
 function stopSilentAudio() {
-  silentAudio.pause();
-  silentAudio.currentTime = 0;
+  if (silentOsc) {
+    silentOsc.stop();
+    silentOsc.disconnect();
+    silentOsc = null;
+  }
   document.getElementById('audioStatus').textContent = '';
 }
 
