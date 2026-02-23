@@ -361,7 +361,7 @@ body { position: fixed; width: 100%; }
   <div class="logo-mark">8 WEEKS</div>
   <div class="logo">Couch to 5K</div>
   <div class="tagline">get off the couch already</div>
-  <button class="spotify-connect" id="spotifyConnectBtn" style="display:none">♫ Connect Spotify</button>
+  <button class="spotify-connect" id="spotifyConnectBtn" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.24.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.98-1.38-.48.12-.99-.12-1.14-.6-.12-.48.12-.99.6-1.14 4.38-1.32 9.78-.66 13.5 1.62.36.18.54.78.28 1.2zm.12-3.36C15.24 8.4 8.88 8.16 5.16 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.56.3z"/></svg> Connect Spotify</button>
   <div class="stats-bar" id="statsBar">
     <div class="stat-card total-runs">
       <div class="stat-val" id="homeStatRuns">0</div>
@@ -411,15 +411,15 @@ body { position: fixed; width: 100%; }
   </div>
 
   <div class="spotify-bar hidden" id="spotifyBar">
-    <div class="spotify-icon">♫</div>
+    <svg class="spotify-icon" width="16" height="16" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.24.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.98-1.38-.48.12-.99-.12-1.14-.6-.12-.48.12-.99.6-1.14 4.38-1.32 9.78-.66 13.5 1.62.36.18.54.78.28 1.2zm.12-3.36C15.24 8.4 8.88 8.16 5.16 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.56.3z"/></svg>
     <div class="spotify-track-info">
       <div class="spotify-track-name" id="spotifyTrackName">Not playing</div>
       <div class="spotify-track-artist" id="spotifyTrackArtist"></div>
     </div>
     <div class="spotify-controls">
-      <button onclick="spotifyPrevTrack()">⏮</button>
-      <button class="spotify-play-btn" id="spotifyPlayPause" onclick="spotifyToggle()">▶</button>
-      <button onclick="spotifyNextTrack()">⏭</button>
+      <button onclick="spotifyPrevTrack()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+      <button class="spotify-play-btn" id="spotifyPlayPause" onclick="spotifyToggle()"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+      <button onclick="spotifyNextTrack()"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
     </div>
   </div>
 
@@ -896,7 +896,7 @@ function updateSpotifyHomeUI() {
     btn.onclick = null;
   } else {
     btn.className = 'spotify-connect';
-    btn.textContent = '♫ Connect Spotify';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.24.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.98-1.38-.48.12-.99-.12-1.14-.6-.12-.48.12-.99.6-1.14 4.38-1.32 9.78-.66 13.5 1.62.36.18.54.78.28 1.2zm.12-3.36C15.24 8.4 8.88 8.16 5.16 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.56.3z"/></svg> Connect Spotify';
     btn.onclick = loginSpotify;
   }
 }
@@ -912,7 +912,9 @@ function updateSpotifyBarUI() {
   document.getElementById('spotifyTrackName').textContent = spotifyCurrentTrack.name;
   document.getElementById('spotifyTrackArtist').textContent =
     spotifyCurrentTrack.artists.map(a => a.name).join(', ');
-  document.getElementById('spotifyPlayPause').textContent = spotifyIsPaused ? '▶' : '⏸';
+  document.getElementById('spotifyPlayPause').innerHTML = spotifyIsPaused
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 }
 
 // ============ STATE ============
