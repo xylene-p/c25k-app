@@ -354,6 +354,7 @@ body { position: fixed; width: 100%; }
 <div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">2abf7fd</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
+<audio id="silentAudio" src="/silence.mp3" loop preload="auto"></audio>
 
 
 <!-- HOME -->
@@ -597,31 +598,36 @@ const program = [
 // ============ AUDIO ENGINE ============
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
-let silentAudio = null;
-
 function ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// Keep browser alive using <audio> loop — the only reliable way to prevent
-// iOS Safari from suspending JS on screen lock. Now that Spotify plays
-// through our page via Web Playback SDK (same audio session), there's no
-// media session conflict with an external app.
+// Keep iOS Safari alive on screen lock using a DOM <audio> element.
+// Must be called FIRST in the user gesture chain (before AudioContext ops)
+// so iOS grants the play permission. The element lives in the DOM with
+// preload="auto" so it's ready instantly.
 function startSilentAudio() {
-  if (silentAudio) return;
-  silentAudio = new Audio('/silence.mp3');
-  silentAudio.loop = true;
-  silentAudio.volume = 0.01;
-  silentAudio.play().catch(() => {});
+  const el = document.getElementById('silentAudio');
+  if (!el.paused) return; // already playing
+  el.volume = 0.01;
+  el.play().catch(() => {});
+  // Register Media Session so iOS treats us as active media
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: 'C25K Workout',
+      artist: 'Couch to 5K',
+    });
+    navigator.mediaSession.playbackState = 'playing';
+  }
   document.getElementById('audioStatus').textContent = '🔊';
 }
 
 function stopSilentAudio() {
-  if (silentAudio) {
-    silentAudio.pause();
-    silentAudio.src = '';
-    silentAudio = null;
+  const el = document.getElementById('silentAudio');
+  el.pause();
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'none';
   }
   document.getElementById('audioStatus').textContent = '';
 }
@@ -1316,6 +1322,9 @@ function flashScreen(phase) {
 // ============ CONTROLS ============
 let cuesLoaded = false;
 function togglePlay() {
+  // Start silent audio FIRST — must be the very first audio call in the
+  // user gesture chain or iOS Safari won't grant play permission.
+  if (!isRunning) startSilentAudio();
   ensureAudio();
   if (!cuesLoaded) { cuesLoaded = true; loadVoiceCues(); }
   if (isRunning) {
