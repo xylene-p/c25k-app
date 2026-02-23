@@ -1,4 +1,4 @@
-const CACHE_NAME = 'c25k-v5';
+const CACHE_NAME = 'c25k-v6';
 const ASSETS = [
   '/',
   '/index.html',
@@ -29,8 +29,11 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Don't cache API calls
-  if (e.request.url.includes('/api/')) {
+  // Don't cache API calls or Spotify SDK (always load fresh)
+  if (e.request.url.includes('/api/') ||
+      e.request.url.includes('sdk.scdn.co') ||
+      e.request.url.includes('accounts.spotify.com') ||
+      e.request.url.includes('api.spotify.com')) {
     return;
   }
 
