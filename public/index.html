@@ -351,7 +351,7 @@ body { position: fixed; width: 100%; }
 </head>
 <body>
 
-<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">4389762</div>
+<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">d6942e3</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
 <audio id="silentAudio" src="/silence.mp3" loop preload="auto"></audio>
@@ -601,32 +601,49 @@ let audioCtx = null;
 let silentOsc = null;
 
 function ensureAudio() {
-  if (!audioCtx) audioCtx = new AudioCtx();
+  if (!audioCtx) {
+    audioCtx = new AudioCtx();
+    // Tell iOS this is important playback audio — keep the page alive.
+    // Previous commits only tried 'ambient' which tells iOS to suspend.
+    if (audioCtx.audioSession && typeof audioCtx.audioSession.type !== 'undefined') {
+      audioCtx.audioSession.type = 'playback';
+    }
+  }
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// Belt-and-suspenders keepalive: both <audio> element AND AudioContext
-// oscillator. The <audio> element is what iOS respects for keeping the
-// page alive; the oscillator is a secondary signal. Both must start
-// from the user gesture chain.
+// Triple keepalive strategy:
+// 1. <audio> element playing silence.mp3 (iOS media session)
+// 2. AudioContext oscillator (WebAudio signal)
+// 3. AudioContext piped to <audio> via MediaStream (live source)
+// The MediaStream approach makes the <audio> element a "live" source
+// which iOS may treat as higher priority than a static file loop.
 function startSilentAudio() {
-  // 1. <audio> element (primary iOS keepalive)
-  const el = document.getElementById('silentAudio');
-  el.volume = 0.01;
-  if (el.paused) el.play().catch(() => {});
-
-  // 2. AudioContext oscillator (secondary keepalive)
   ensureAudio();
-  if (!silentOsc) {
-    silentOsc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    silentOsc.connect(gain);
-    gain.connect(audioCtx.destination);
-    gain.gain.value = 0.001;
-    silentOsc.start();
+
+  // Create oscillator → MediaStreamDestination → <audio>.srcObject
+  // This makes the <audio> element play a live AudioContext stream,
+  // which iOS should treat as active real-time audio.
+  const el = document.getElementById('silentAudio');
+  if (el.paused) {
+    if (audioCtx.createMediaStreamDestination) {
+      const dest = audioCtx.createMediaStreamDestination();
+      if (!silentOsc) {
+        silentOsc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        silentOsc.connect(gain);
+        gain.connect(dest);
+        gain.connect(audioCtx.destination);
+        gain.gain.value = 0.001;
+        silentOsc.start();
+      }
+      el.srcObject = dest.stream;
+    }
+    el.volume = 0.01;
+    el.play().catch(() => {});
   }
 
-  // 3. Media Session so iOS treats us as active media
+  // Media Session so iOS shows us as active media
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: 'C25K Workout',
@@ -640,6 +657,7 @@ function startSilentAudio() {
 function stopSilentAudio() {
   const el = document.getElementById('silentAudio');
   el.pause();
+  el.srcObject = null;
   if (silentOsc) {
     silentOsc.stop();
     silentOsc.disconnect();
