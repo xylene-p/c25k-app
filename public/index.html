@@ -351,7 +351,7 @@ body { position: fixed; width: 100%; }
 </head>
 <body>
 
-<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">debug</div>
+<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">sched</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
 <audio id="silentAudio" src="/silence.mp3" loop preload="auto"></audio>
@@ -612,38 +612,31 @@ function ensureAudio() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
-// Triple keepalive strategy:
-// 1. <audio> element playing silence.mp3 (iOS media session)
-// 2. AudioContext oscillator (WebAudio signal)
-// 3. AudioContext piped to <audio> via MediaStream (live source)
-// The MediaStream approach makes the <audio> element a "live" source
-// which iOS may treat as higher priority than a static file loop.
+// Keepalive: pipe AudioContext through MediaStreamDestination into
+// the DOM <audio> element. All scheduled cues flow through this same
+// pipeline so iOS keeps them alive during screen lock.
+let mediaStreamDest = null;
+
 function startSilentAudio() {
   ensureAudio();
-
-  // Create oscillator → MediaStreamDestination → <audio>.srcObject
-  // This makes the <audio> element play a live AudioContext stream,
-  // which iOS should treat as active real-time audio.
   const el = document.getElementById('silentAudio');
   if (el.paused) {
     if (audioCtx.createMediaStreamDestination) {
-      const dest = audioCtx.createMediaStreamDestination();
+      mediaStreamDest = audioCtx.createMediaStreamDestination();
       if (!silentOsc) {
         silentOsc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         silentOsc.connect(gain);
-        gain.connect(dest);
+        gain.connect(mediaStreamDest);
         gain.connect(audioCtx.destination);
         gain.gain.value = 0.001;
         silentOsc.start();
       }
-      el.srcObject = dest.stream;
+      el.srcObject = mediaStreamDest.stream;
     }
-    el.volume = 0.01;
+    el.volume = 1.0; // full volume — oscillator gain is 0.001 so inaudible
     el.play().catch(() => {});
   }
-
-  // Media Session so iOS shows us as active media
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: 'C25K Workout',
@@ -658,6 +651,7 @@ function stopSilentAudio() {
   const el = document.getElementById('silentAudio');
   el.pause();
   el.srcObject = null;
+  mediaStreamDest = null;
   if (silentOsc) {
     silentOsc.stop();
     silentOsc.disconnect();
@@ -667,6 +661,93 @@ function stopSilentAudio() {
     navigator.mediaSession.playbackState = 'none';
   }
   document.getElementById('audioStatus').textContent = '';
+}
+
+// ============ PRE-SCHEDULED CUES ============
+// AudioContext's scheduler runs independently of JS timers.
+// Pre-schedule all phase transition cues so they fire even when
+// iOS suspends JavaScript during screen lock.
+let scheduledNodes = [];
+
+function scheduleAllCues() {
+  cancelScheduledCues();
+  if (!audioCtx || !isRunning) return;
+
+  const now = audioCtx.currentTime;
+  let offset = secondsLeft;
+
+  // Countdown for current interval
+  for (let c = 3; c >= 1; c--) {
+    if (secondsLeft > c) scheduleCueBeep(440, 0.08, 1, now + secondsLeft - c);
+  }
+
+  for (let i = intervalIndex + 1; i < intervals.length; i++) {
+    const phase = intervals[i].type;
+    const t = now + offset;
+
+    // Countdown (3, 2, 1 before transition)
+    for (let c = 3; c >= 1; c--) {
+      if (offset > c) scheduleCueBeep(440, 0.08, 1, t - c);
+    }
+
+    // Phase change cue
+    if (phase === 'run') {
+      scheduleCueBeep(880, 0.15, 2, t);
+      scheduleCueVoice('Run', t + 0.5);
+    } else if (phase === 'walk') {
+      scheduleCueBeep(520, 0.2, 1, t);
+      scheduleCueVoice('Walk', t + 0.5);
+    } else if (phase === 'cooldown') {
+      scheduleCueBeep(660, 0.15, 1, t);
+      scheduleCueVoice('Cool down', t + 0.5);
+    }
+
+    offset += intervals[i].duration;
+  }
+
+  // Done cue at the very end
+  scheduleCueBeep(1047, 0.12, 3, now + offset);
+  scheduleCueVoice('Workout complete. Great job!', now + offset + 0.5);
+}
+
+function scheduleCueBeep(freq, duration, count, when) {
+  for (let i = 0; i < count; i++) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    if (mediaStreamDest) gain.connect(mediaStreamDest);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    const t = when + i * 0.25;
+    gain.gain.setValueAtTime(0.6, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+    osc.start(t);
+    osc.stop(t + duration);
+    scheduledNodes.push(osc);
+  }
+}
+
+function scheduleCueVoice(text, when) {
+  const buffer = voiceCues[text];
+  if (!buffer) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const gain = audioCtx.createGain();
+  gain.gain.value = 2.0;
+  src.connect(gain);
+  gain.connect(audioCtx.destination);
+  if (mediaStreamDest) gain.connect(mediaStreamDest);
+  src.start(when);
+  scheduledNodes.push(src);
+}
+
+function cancelScheduledCues() {
+  scheduledNodes.forEach(node => {
+    try { node.stop(); } catch {}
+    try { node.disconnect(); } catch {}
+  });
+  scheduledNodes = [];
 }
 
 // Duck Spotify volume when cues play, restore after
@@ -1338,7 +1419,8 @@ function startTimer() {
   }
   tickInterval = setInterval(backgroundAwareTick, 250);
   requestWakeLock();
-  startSilentAudio(); // <audio> keeps iOS alive; no conflict since Spotify is in same page
+  startSilentAudio();
+  scheduleAllCues(); // pre-schedule all audio for screen lock survival
   updatePlayBtn();
 }
 
@@ -1346,6 +1428,7 @@ function stopTimer() {
   isRunning = false;
   clearInterval(tickInterval);
   lastTickTime = null;
+  cancelScheduledCues();
   releaseWakeLock();
   stopSilentAudio();
   updatePlayBtn();
@@ -1358,15 +1441,10 @@ function backgroundAwareTick() {
   if (elapsed < 1) return;
   lastTickTime = now;
 
-  // Process each elapsed second
+  // Process each elapsed second (audio handled by pre-scheduled cues)
   for (let i = 0; i < elapsed; i++) {
     secondsLeft--;
     totalSeconds++;
-
-    // Only beep countdown if we're in real-time (not catching up from background)
-    if (elapsed <= 2 && secondsLeft <= 3 && secondsLeft > 0) {
-      beepCountdown();
-    }
 
     if (secondsLeft <= 0) {
       intervalIndex++;
@@ -1377,12 +1455,9 @@ function backgroundAwareTick() {
       secondsLeft = intervals[intervalIndex].duration;
       const phase = intervals[intervalIndex].type;
 
-      // Always announce phase changes (even after background catch-up)
+      // Visual flash only — audio cues are pre-scheduled via AudioContext
       if (i === elapsed - 1 || elapsed <= 2) {
         flashScreen(phase);
-        if (phase === 'run') { beepRun(); speak('Run'); }
-        else if (phase === 'walk') { beepWalk(); speak('Walk'); }
-        else if (phase === 'cooldown') { beepWarmup(); speak('Cool down'); }
       }
     }
   }
@@ -1439,6 +1514,7 @@ function updatePlayBtn() {
 
 function skipInterval() {
   if (!isRunning && totalSeconds === 0) return;
+  cancelScheduledCues();
   totalSeconds += secondsLeft;
   intervalIndex++;
   if (intervalIndex >= intervals.length) { finishWorkout(); return; }
@@ -1448,6 +1524,7 @@ function skipInterval() {
   if (phase === 'run') { beepRun(); speak('Run'); }
   else if (phase === 'walk') { beepWalk(); speak('Walk'); }
   else if (phase === 'cooldown') { beepWarmup(); speak('Cool down'); }
+  if (isRunning) scheduleAllCues();
   updateTimerDisplay();
 }
 
@@ -1465,6 +1542,7 @@ function resetWorkout() {
 }
 
 function finishWorkout() {
+  cancelScheduledCues();
   stopTimer();
   beepDone();
   speak('Workout complete. Great job!');
