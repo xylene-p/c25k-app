@@ -351,7 +351,7 @@ body { position: fixed; width: 100%; }
 </head>
 <body>
 
-<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">d6942e3</div>
+<div style="background:#1e1e2e;color:#666;font-family:'Space Mono',monospace;font-size:10px;text-align:center;padding:2px 0;" id="versionBar">debug</div>
 <div class="flash-overlay" id="flashOverlay"></div>
 <div class="audio-status" id="audioStatus"></div>
 <audio id="silentAudio" src="/silence.mp3" loop preload="auto"></audio>
@@ -851,13 +851,28 @@ function logoutSpotify() {
 }
 
 // -- SDK Initialization --
+let spotifyStatus = ''; // visible debug status
+
 window.onSpotifyWebPlaybackSDKReady = () => {
+  spotifyStatus = 'SDK ready';
+  updateSpotifyHomeUI();
   if (localStorage.getItem('spotify_access_token')) initSpotifyPlayer();
 };
 
 async function initSpotifyPlayer() {
+  if (typeof Spotify === 'undefined') {
+    spotifyStatus = 'SDK not loaded';
+    updateSpotifyHomeUI();
+    return;
+  }
   const token = await getValidSpotifyToken();
-  if (!token) return;
+  if (!token) {
+    spotifyStatus = 'No valid token';
+    updateSpotifyHomeUI();
+    return;
+  }
+  spotifyStatus = 'Creating player…';
+  updateSpotifyHomeUI();
 
   spotifyPlayer = new Spotify.Player({
     name: 'C25K Workout',
@@ -868,6 +883,7 @@ async function initSpotifyPlayer() {
   spotifyPlayer.addListener('ready', ({ device_id }) => {
     spotifyDeviceId = device_id;
     spotifyConnected = true;
+    spotifyStatus = '';
     updateSpotifyHomeUI();
     updateSpotifyBarUI();
   });
@@ -875,6 +891,7 @@ async function initSpotifyPlayer() {
   spotifyPlayer.addListener('not_ready', () => {
     spotifyConnected = false;
     spotifyDeviceId = null;
+    spotifyStatus = 'Device not ready';
     updateSpotifyHomeUI();
     updateSpotifyBarUI();
   });
@@ -890,16 +907,23 @@ async function initSpotifyPlayer() {
     updateSpotifyBarUI();
   });
 
-  spotifyPlayer.addListener('initialization_error', ({ message }) =>
-    console.error('Spotify init error:', message));
+  spotifyPlayer.addListener('initialization_error', ({ message }) => {
+    spotifyStatus = 'Init error: ' + message;
+    updateSpotifyHomeUI();
+  });
   spotifyPlayer.addListener('authentication_error', ({ message }) => {
-    console.error('Spotify auth error:', message);
+    spotifyStatus = 'Auth error: ' + message;
     clearSpotifyTokens();
     spotifyConnected = false;
     updateSpotifyHomeUI();
   });
 
-  spotifyPlayer.connect();
+  spotifyPlayer.connect().then(ok => {
+    if (!ok) {
+      spotifyStatus = 'connect() returned false';
+      updateSpotifyHomeUI();
+    }
+  });
 }
 
 // -- Playback --
@@ -935,8 +959,8 @@ function updateSpotifyHomeUI() {
     btn.onclick = logoutSpotify;
   } else if (localStorage.getItem('spotify_access_token')) {
     btn.className = 'spotify-connect connected';
-    btn.textContent = 'Connecting to Spotify…';
-    btn.onclick = null;
+    btn.textContent = spotifyStatus ? spotifyStatus : 'Connecting to Spotify…';
+    btn.onclick = logoutSpotify;
   } else {
     btn.className = 'spotify-connect';
     btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.24.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.98-1.38-.48.12-.99-.12-1.14-.6-.12-.48.12-.99.6-1.14 4.38-1.32 9.78-.66 13.5 1.62.36.18.54.78.28 1.2zm.12-3.36C15.24 8.4 8.88 8.16 5.16 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.56.3z"/></svg> Connect Spotify';
