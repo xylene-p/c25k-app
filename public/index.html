@@ -971,14 +971,19 @@ function updateSpotifyHomeUI() {
 function updateSpotifyBarUI() {
   const bar = document.getElementById('spotifyBar');
   if (!bar) return;
-  if (!spotifyConnected || !spotifyCurrentTrack) {
+  if (!spotifyConnected) {
     bar.classList.add('hidden');
     return;
   }
   bar.classList.remove('hidden');
-  document.getElementById('spotifyTrackName').textContent = spotifyCurrentTrack.name;
-  document.getElementById('spotifyTrackArtist').textContent =
-    spotifyCurrentTrack.artists.map(a => a.name).join(', ');
+  if (spotifyCurrentTrack) {
+    document.getElementById('spotifyTrackName').textContent = spotifyCurrentTrack.name;
+    document.getElementById('spotifyTrackArtist').textContent =
+      spotifyCurrentTrack.artists.map(a => a.name).join(', ');
+  } else {
+    document.getElementById('spotifyTrackName').textContent = 'No track playing';
+    document.getElementById('spotifyTrackArtist').textContent = 'Play something in Spotify';
+  }
   document.getElementById('spotifyPlayPause').innerHTML = spotifyIsPaused
     ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
     : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
