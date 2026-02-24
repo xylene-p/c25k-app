@@ -669,8 +669,23 @@ function stopSilentAudio() {
   document.getElementById('audioStatus').textContent = '';
 }
 
+// Duck Spotify volume when cues play, restore after
+const SPOTIFY_NORMAL_VOL = 0.8;
+const SPOTIFY_DUCK_VOL = 0.15;
+let duckTimeout = null;
+
+function duckSpotify(durationMs = 2000) {
+  if (!spotifyPlayer || !spotifyConnected) return;
+  clearTimeout(duckTimeout);
+  spotifyPlayer.setVolume(SPOTIFY_DUCK_VOL);
+  duckTimeout = setTimeout(() => {
+    if (spotifyPlayer) spotifyPlayer.setVolume(SPOTIFY_NORMAL_VOL);
+  }, durationMs);
+}
+
 function playBeep(freq, duration, count = 1) {
   ensureAudio();
+  duckSpotify(1000);
   for (let i = 0; i < count; i++) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -679,7 +694,7 @@ function playBeep(freq, duration, count = 1) {
     osc.frequency.value = freq;
     osc.type = 'sine';
     const startTime = audioCtx.currentTime + i * 0.25;
-    gain.gain.setValueAtTime(0.3, startTime);
+    gain.gain.setValueAtTime(0.6, startTime);
     gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
     osc.start(startTime);
     osc.stop(startTime + duration);
@@ -716,11 +731,15 @@ async function loadVoiceCues() {
 
 function speak(text) {
   ensureAudio();
+  duckSpotify(2500);
   const buffer = voiceCues[text];
   if (buffer) {
     const src = audioCtx.createBufferSource();
     src.buffer = buffer;
-    src.connect(audioCtx.destination);
+    const gain = audioCtx.createGain();
+    gain.gain.value = 2.0; // boost voice cues over music
+    src.connect(gain);
+    gain.connect(audioCtx.destination);
     src.start();
   } else if ('speechSynthesis' in window) {
     // Fallback if cue wasn't loaded
